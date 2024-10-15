@@ -7,7 +7,7 @@
   "scripts": {
     "start": "npm run start-dev",
     "start-dev": "env-cmd -f .env.development react-scripts --max_old_space_size=4096 start",
-    "build-dev": "env-cmd -f .env.development react-scripts --max_old_space_size=4096 build",
+    "build-dev": "env-cmd -f .env.development GENERATE_SOURCEMAP=false react-scripts build",
     "build-dev-start": "env-cmd -f .env.development serve -s build",
     "start-prod": "env-cmd -f .env.production react-scripts --max_old_space_size=4096 start",
     "build-prod": "env-cmd -f .env.production react-scripts --max_old_space_size=4096 build",
