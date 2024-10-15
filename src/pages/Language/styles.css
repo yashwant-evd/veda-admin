@@ -1,0 +1,10 @@
+.dateHeight {
+  .css-1j6hc4w-MuiInputBase-input-MuiOutlinedInput-input {
+    height: 41px;
+  }
+}
+
+.css-1ounzbb-MuiPaper-root-MuiDialog-paper {
+  min-width: 90% !important;
+  min-height: 90% !important;
+}

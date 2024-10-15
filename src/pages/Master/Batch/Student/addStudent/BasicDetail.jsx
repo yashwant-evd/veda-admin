@@ -1,0 +1,799 @@
+import {
+  FormControl,
+  Grid,
+  TextField,
+  Typography,
+  InputLabel,
+  Select,
+  MenuItem,
+  Autocomplete,
+} from "@mui/material";
+import { Helmet } from "react-helmet-async";
+import { Box, Container, Stack } from "@mui/system";
+import React, { useState } from "react";
+import CustomComponentLoader from "components/CustomComponentLoader";
+import { useSettingsContext } from "components/settings";
+import { LoadingButton } from "@mui/lab";
+import { UploadAvatar } from "components/upload";
+import { useSelector } from "react-redux";
+import { useFormik } from "formik";
+import { _initialValues, _validation } from "./utils";
+import { useParams } from "react-router";
+import "../student.css";
+import { GenerateBase64 } from "utils/convertToBase64";
+import { useDispatch } from "react-redux";
+import { useEffect } from "react";
+import moment from "moment/moment";
+import { toast } from "react-hot-toast";
+import { toastoptions } from "utils/toastoptions";
+import {
+  getBatchByCourseBoardClassAsync,
+  getBoardsByCourseIdAsync,
+  getClassByBoardAndCourseIdAsync,
+  createStudentAsync,
+  getstudentbyidAsync,
+  updateStudentByIdAsync,
+  getAllDepartmentAsync,
+  getAllDesignationAsync,
+} from "redux/async.api";
+import { getcourseAsync } from "redux/course/course.async";
+import { getBatchDateByBatchTypeIdAsync } from "redux/batchdate/batchdate.async";
+import { getBatchTypeByIdAsync } from "redux/batchtype/batchtype.async";
+import { getAllBatchTypes } from "redux/batchtype/batchtype.async";
+import { getStateFilterAsync } from "redux/filter/filter.async";
+import { getCityAsync } from "redux/city/cities.async";
+
+function BasicDetail({ studentInfo, studentid, batchId }) {
+  const { themeStretch } = useSettingsContext();
+  const { id } = useParams();
+  const dispatch = useDispatch();
+  // console.log("batchById", batchId, batchById);
+  const {
+    studentLoader,
+    studentById,
+    getALLDeptData,
+    getALLDesigData,
+    getALLDeptLoader,
+    getALLDesigLoader,
+  } = useSelector((state) => state.student);
+
+  const { filterLoader, stateFilter } = useSelector(
+    (state) => state.filterInfo
+  );
+  const { cityLoader, city } = useSelector((state) => state.city);
+
+  const [stateVal, setStateVal] = useState({ id: "", name: "" });
+  const [inputValue, setInputValue] = useState("");
+
+  const [cityVal, setCityVal] = useState({ id: "", name: "" });
+  const [inputCityValue, setCityInputValue] = useState("");
+
+  const { boardLoader, boardByCourse } = useSelector((state) => state.board);
+  const { courseLoader, course } = useSelector((state) => state.course);
+  const tabTitle = useSelector(
+    (state) => state?.admin?.adminSetting?.siteTitle
+  );
+
+  const { classLoader, classbycourseboard } = useSelector(
+    (state) => state.class
+  );
+  const { batchLoader, batchById, batchByCourseBoardClass, batches } =
+    useSelector((state) => state.batch);
+
+  const { batchdateLoader, getBatchDateByBatchTypeId } = useSelector(
+    (state) => state.batchdate
+  );
+
+  const getCourseAsync = () => {
+    dispatch(
+      getcourseAsync({
+        page: "",
+        limit: "",
+      })
+    );
+  };
+
+  const handleDrop = (acceptedFiles) => {
+    const file = acceptedFiles[0];
+    const newFile = Object.assign(file, {
+      preview: URL.createObjectURL(file),
+    });
+    if (file) {
+      formik.setFieldValue("avatar", [newFile]);
+    }
+  };
+
+  const onSubmit = async (values) => {
+    const imageBase64 = await GenerateBase64(values.avatar[0]);
+
+    const birthdateMoment = moment(values.dob);
+    const currentDateMoment = moment();
+    const ageInYears = currentDateMoment.diff(birthdateMoment, "years");
+
+    if (values.phone.toString().length !== 10) {
+      toast.error("Phone number should be 10 digits");
+      toastoptions;
+
+      return;
+    }
+    // if (values.pincode.toString().length !== 6) {
+    //   toast.error("Pin code should be 6 digit");
+    //   toastoptions;
+    //   return;
+    // }
+
+    if (values.mPin.toString().length !== 4) {
+      toast.error("M-Pin  should be 4 digit");
+      toastoptions;
+      return;
+    }
+
+    if (ageInYears < 18) {
+      toast.error(
+        "You must be at least 18 years old to register.",
+        toastoptions
+      );
+      return;
+    }
+
+    let payload = {
+      employeeCode: values.empCode,
+      Department: values.department,
+      Designation: values.designation,
+      avatar: imageBase64,
+      id: parseInt(id),
+      gender: values.gender,
+      courseId: values.courseId,
+      boardId: values.boardId,
+      classId: values.classId,
+      batchTypeId: values.batchTypeId,
+      name: values.name,
+      dob: values.dob,
+      // pincode: values.pincode.toString(),
+      mPin: values.mPin.toString(),
+      phone: values.phone.toString(),
+      // batchStartDateId: values.batchStartDateId,
+      email: values.email,
+      state: stateVal.id,
+      city: cityVal.id || "",
+    };
+
+    if (id) {
+      delete payload.phone;
+      delete payload.mPin;
+      dispatch(updateStudentByIdAsync(payload));
+    } else {
+      dispatch(createStudentAsync(payload));
+    }
+  };
+
+  const formik = useFormik({
+    initialValues: _initialValues,
+    onSubmit,
+    validationSchema: _validation,
+  });
+
+  const randomDate = new Date(formik.values.dob);
+  const today = new Date();
+  const yearCount = today.getFullYear() - randomDate.getFullYear();
+  useEffect(() => {
+    getCourseAsync();
+  }, []);
+
+  // useEffect(() => {
+  //   if (formik.values.courseId) {
+  //     dispatch(
+  //       getBoardsByCourseIdAsync({
+  //         courseId: formik.values.courseId,
+  //       })
+  //     );
+  //   }
+  // }, [formik.values.courseId]);
+
+  useEffect(() => {
+    dispatch(getAllDepartmentAsync({}));
+    dispatch(getAllDesignationAsync({}));
+    dispatch(getAllBatchTypes({}));
+    dispatch(getStateFilterAsync({}));
+    dispatch(
+      getCityAsync({
+        page: "",
+        limit: "",
+        city: "",
+        state: "",
+      })
+    );
+  }, []);
+
+  useEffect(() => {
+    dispatch(
+      getCityAsync({
+        page: "",
+        limit: "",
+        city: "",
+        state: stateVal?.name,
+      })
+    );
+  }, [stateVal?.name]);
+
+  // useEffect(() => {
+  //   if (formik.values.boardId) {
+  //     dispatch(
+  //       getClassByBoardAndCourseIdAsync({
+  //         courseId: formik.values.courseId,
+  //         boardId: formik.values.boardId,
+  //       })
+  //     );
+  //   }
+  // }, [formik.values.boardId]);
+
+  // useEffect(() => {
+  //   if (formik.values.classId) {
+  //     dispatch(
+  //       getBatchByCourseBoardClassAsync({
+  //         courseId: formik.values.courseId,
+  //         boardId: formik.values.boardId,
+  //         classId: formik.values.classId,
+  //       })
+  //     );
+  //   }
+  // }, [formik.values.classId]);
+
+  // useEffect(() => {
+  //   if (formik.values.batchTypeId) {
+  //     dispatch(
+  //       getBatchDateByBatchTypeIdAsync({
+  //         courseId: formik.values.courseId,
+  //         boardId: formik.values.boardId,
+  //         classId: formik.values.classId,
+  //         batchTypeId: formik.values.batchTypeId,
+  //       })
+  //     );
+  //   }
+  // }, [formik.values.batchTypeId]);
+
+  useEffect(() => {
+    if (id) {
+      dispatch(getstudentbyidAsync(id));
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (batchId) dispatch(getBatchTypeByIdAsync(batchId));
+  }, [batchId]);
+
+  useEffect(() => {
+    if (id && studentById) {
+      formik.setFieldValue("empCode", studentById.employeeCode);
+      formik.setFieldValue("department", studentById.departmentId);
+      formik.setFieldValue("designation", studentById.designationId);
+      formik.setFieldValue("avatar", [studentById.avatar]);
+      formik.setFieldValue("gender", studentById.gender);
+      // formik.setFieldValue("courseId", studentById.courseId);
+      // formik.setFieldValue("boardId", studentById.boardId);
+      // formik.setFieldValue("classId", studentById.classId);
+      formik.setFieldValue("batchTypeId", studentById.batchTypeId);
+      formik.setFieldValue("name", studentById.name);
+      formik.setFieldValue("dob", moment(studentById.dob).format("YYYY-MM-DD"));
+      // formik.setFieldValue("pincode", studentById.pincode);
+      formik.setFieldValue("phone", studentById.phone);
+      // formik.setFieldValue("batchStartDateId", studentById.batchStartDateId);
+      formik.setFieldValue("mPin", "null");
+      formik.setFieldValue("email", studentById.email);
+      setStateVal({
+        id: studentById.state || "",
+        name: studentById.stateName || "",
+      });
+      setCityVal({
+        id: studentById.city || "",
+        name: studentById.cityName || "",
+      });
+    }
+  }, [id, studentById]);
+
+  useEffect(() => {
+    if (batchId && batchById) {
+      // formik.setFieldValue("courseId", batchById.courseId);
+      // formik.setFieldValue("boardId", batchById.boardId);
+      // formik.setFieldValue("classId", batchById.classId);
+      formik.setFieldValue("batchTypeId", batchById.id);
+    }
+  }, [batchId, batchById]);
+
+  console.log("batchById...", batchId, batchById, batches?.data);
+
+  return (
+    <Container maxWidth={themeStretch ? "lg" : false}>
+      <Helmet>
+        <title>Staff Manager | {`${tabTitle}`}</title>
+      </Helmet>
+
+      <form onSubmit={formik.handleSubmit}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={3}>
+            <Box sx={{ mb: 2 }}>
+              <UploadAvatar
+                name="avatar"
+                accept={{
+                  "image/*": [],
+                }}
+                file={formik.values.avatar[0]}
+                error={formik.touched.avatar && formik.errors.avatar}
+                onDrop={handleDrop}
+                helperText={
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      mt: 2,
+                      mx: "auto",
+                      display: "block",
+                      textAlign: "center",
+                      color:
+                        formik.touched.avatar && formik.errors.avatar
+                          ? "red"
+                          : "text.secondary",
+                    }}
+                  >
+                    Allowed *.jpeg, *.jpg, *.png, *.gif
+                  </Typography>
+                }
+              />
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} md={9}>
+            <Box
+              rowGap={3}
+              columnGap={2}
+              display="grid"
+              gridTemplateColumns={{
+                xs: "repeat(1, 1fr)",
+                sm: "repeat(2, 1fr)",
+              }}
+            >
+              <FormControl fullWidth>
+                <TextField
+                  name="empCode"
+                  disabled={id && studentById?.employeeCode}
+                  label={
+                    studentLoader ? (
+                      <CustomComponentLoader padding="0 0" size={20} />
+                    ) : (
+                      " Employee Code"
+                    )
+                  }
+                  {...formik.getFieldProps("empCode")}
+                  onChange={formik.handleChange}
+                  error={formik.touched.empCode && formik.errors.empCode}
+                />
+              </FormControl>
+              <FormControl
+                fullWidth
+                disabled={getALLDeptLoader}
+                error={formik.touched.department && formik.errors.department}
+              >
+                <InputLabel>
+                  {getALLDeptLoader ? (
+                    <CustomComponentLoader padding="0 0" size={20} />
+                  ) : (
+                    "Department"
+                  )}
+                </InputLabel>
+                <Select
+                  label="Department"
+                  name="department"
+                  {...formik.getFieldProps("department")}
+                  onChange={formik.handleChange}
+                >
+                  <MenuItem defaultValue value="">
+                    Select Department
+                  </MenuItem>
+                  {getALLDeptData?.data?.map((ev, index) => {
+                    return (
+                      <MenuItem value={ev.id} key={ev.id}>
+                        {ev.department}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              </FormControl>
+              <FormControl
+                fullWidth
+                disabled={getALLDesigLoader}
+                error={formik.touched.designation && formik.errors.designation}
+              >
+                <InputLabel>
+                  {getALLDesigLoader ? (
+                    <CustomComponentLoader padding="0 0" size={20} />
+                  ) : (
+                    "Designation"
+                  )}
+                </InputLabel>
+                <Select
+                  label="Designation"
+                  name="designation"
+                  {...formik.getFieldProps("designation")}
+                  onChange={formik.handleChange}
+                >
+                  <MenuItem defaultValue value="">
+                    Select Designation
+                  </MenuItem>
+                  {getALLDesigData?.data?.map((ev, index) => {
+                    return (
+                      <MenuItem value={ev.id} key={ev.id}>
+                        {ev.designation}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              </FormControl>
+
+              {/*<FormControl
+                fullWidth
+                disabled={batchById && !id ? batchById : courseLoader}
+                error={formik.touched.courseId && formik.errors.courseId}
+              >
+                <InputLabel>
+                  {batchById ? (
+                    batchLoader
+                  ) : courseLoader ? (
+                    <CustomComponentLoader padding="0 0" size={20} />
+                  ) : (
+                    "Courses"
+                  )}
+                </InputLabel>
+                <Select
+                  label="Course"
+                  name="courseId"
+                  {...formik.getFieldProps("courseId")}
+                  onChange={formik.handleChange}
+                >
+                  <MenuItem defaultValue value="">
+                    Select Course
+                  </MenuItem>
+                  {course?.data?.map((ev, index) => {
+                    return (
+                      <MenuItem value={ev.id} key={ev.index}>
+                        {ev.name}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              </FormControl>
+
+              <FormControl
+                fullWidth
+                disabled={batchById && !id ? batchById : boardLoader}
+                error={formik.touched.boardId && formik.errors.boardId}
+              >
+                <InputLabel>
+                  {batchById ? (
+                    batchLoader
+                  ) : boardLoader ? (
+                    <CustomComponentLoader padding="0 0" size={20} />
+                  ) : (
+                    "Boards"
+                  )}
+                </InputLabel>
+                <Select
+                  label="Boards"
+                  name="boardId"
+                  {...formik.getFieldProps("boardId")}
+                  onChange={formik.handleChange}
+                >
+                  <MenuItem defaultValue value="">
+                    Select Board
+                  </MenuItem>
+                  {boardByCourse?.map((ev, index) => {
+                    return (
+                      <MenuItem value={ev.id} key={ev.index}>
+                        {ev.name}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              </FormControl>
+
+              <FormControl
+                fullWidth
+                disabled={batchById && !id ? batchById : classLoader}
+                error={formik.touched.classId && formik.errors.classId}
+              >
+                <InputLabel>
+                  {batchById ? (
+                    batchLoader
+                  ) : classLoader ? (
+                    <CustomComponentLoader padding="0 0" size={20} />
+                  ) : (
+                    "Classes"
+                  )}
+                </InputLabel>
+                <Select
+                  label="Classes"
+                  name="classId"
+                  {...formik.getFieldProps("classId")}
+                  onChange={formik.handleChange}
+                >
+                  <MenuItem defaultValue value="">
+                    Select Class
+                  </MenuItem>
+                  {classbycourseboard?.map((ev, index) => {
+                    return (
+                      <MenuItem value={ev.id} key={ev.index}>
+                        {ev.name}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              </FormControl>
+
+              {/* <FormControl
+                fullWidth
+                disabled={batchdateLoader}
+                error={
+                  formik.touched.batchStartDateId &&
+                  formik.errors.batchStartDateId
+                }
+              >
+                <InputLabel id="demo-simple-select-label">
+                  {batchdateLoader ? (
+                    <CustomComponentLoader padding="0 0" size={20} />
+                  ) : (
+                    "Batch Start Date"
+                  )}
+                </InputLabel>
+                <Select
+                  label="Batch Start Date"
+                  name="batchStartDateId"
+                  {...formik.getFieldProps("batchStartDateId")}
+                  onChange={formik.handleChange}
+                >
+                  <MenuItem defaultValue value="">
+                    Select Date
+                  </MenuItem>
+                  {getBatchDateByBatchTypeId?.data?.map((ev, index) => {
+                    return (
+                      <MenuItem value={ev.id} key={ev.index}>
+                        {moment(ev.date).format("DD MMMM YYYY")}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+                </FormControl> */}
+
+              <FormControl
+                fullWidth
+                disabled={batchById && !id ? batchById : batchLoader}
+                error={formik.touched.batchTypeId && formik.errors.batchTypeId}
+              >
+                <InputLabel>
+                  {batchLoader ? (
+                    <CustomComponentLoader padding="0 0" size={20} />
+                  ) : (
+                    "Batches"
+                  )}
+                </InputLabel>
+                <Select
+                  label="Batch Name"
+                  name="batchTypeId"
+                  {...formik.getFieldProps("batchTypeId")}
+                  onChange={formik.handleChange}
+                >
+                  <MenuItem defaultValue value="">
+                    Select Batch
+                  </MenuItem>
+                  {batches?.data?.map((ev, index) => {
+                    return (
+                      <MenuItem value={ev.id} key={ev.index}>
+                        {ev.batchTypeName}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              </FormControl>
+
+              <FormControl fullWidth>
+                <TextField
+                  name="name"
+                  label={
+                    studentLoader ? (
+                      <CustomComponentLoader padding="0 0" size={20} />
+                    ) : (
+                      "Employee Name"
+                    )
+                  }
+                  {...formik.getFieldProps("name")}
+                  onChange={formik.handleChange}
+                  error={formik.touched.name && formik.errors.name}
+                />
+              </FormControl>
+
+              <FormControl fullWidth>
+                <TextField
+                  InputLabelProps={{ shrink: true }}
+                  type="date"
+                  name="dob"
+                  label="Date of Birth"
+                  style={{ color: id ? "white !important" : null }}
+                  fullWidth
+                  inputProps={{
+                    max: new Date().toISOString().split("T")[0],
+                  }}
+                  {...formik.getFieldProps("dob")}
+                  onChange={formik.handleChange}
+                  error={formik.touched.dob && formik.errors.dob}
+                />
+              </FormControl>
+
+              <FormControl fullWidth>
+                <TextField
+                  name="email"
+                  // disabled={id && studentById?.email}
+                  label={
+                    studentLoader ? (
+                      <CustomComponentLoader padding="0 0" size={20} />
+                    ) : (
+                      "Email"
+                    )
+                  }
+                  {...formik.getFieldProps("email")}
+                  onChange={formik.handleChange}
+                  error={formik.touched.email && formik.errors.email}
+                />
+              </FormControl>
+
+              <FormControl fullWidth>
+                <InputLabel id="demo-simple-select-label">
+                  Select Gender
+                </InputLabel>
+                <Select
+                  label="Select Gender Type"
+                  name="gender"
+                  {...formik.getFieldProps("gender")}
+                  onChange={(e) =>
+                    formik.setFieldValue("gender", e.target.value)
+                  }
+                  error={formik.touched.gender && formik.errors.gender}
+                >
+                  <MenuItem value="Male">Male</MenuItem>
+                  <MenuItem value="Female">Female</MenuItem>
+                  <MenuItem value="Other">Other</MenuItem>
+                </Select>
+              </FormControl>
+
+              <FormControl fullWidth>
+                <TextField
+                  name="phone"
+                  type="number"
+                  minLength={10}
+                  // inputProps={{ minLength: 10 }}
+                  inputProps={{ maxLength: 10 }}
+                  // disabled={id && studentById?.phone}
+                  label={
+                    studentLoader ? (
+                      <CustomComponentLoader padding="0 0" size={20} />
+                    ) : (
+                      "Phone"
+                    )
+                  }
+                  {...formik.getFieldProps("phone")}
+                  onChange={(e) => {
+                    if (String(e.target.value).length <= 10) {
+                      formik.handleChange(e);
+                    }
+                  }}
+                  error={formik.touched.phone && formik.errors.phone}
+                />
+              </FormControl>
+
+              {/*<FormControl fullWidth>
+                <TextField
+                  type="number"
+                  inputProps={{ maxLength: 6 }}
+                  name="pincode"
+                  label={
+                    studentLoader ? (
+                      <CustomComponentLoader padding="0 0" size={20} />
+                    ) : (
+                      "Pin Code"
+                    )
+                  }
+                  {...formik.getFieldProps("pincode")}
+                  onChange={(e) => {
+                    if (String(e.target.value).length <= 6) {
+                      {
+                        formik.handleChange(e);
+                      }
+                    }
+                  }}
+                  error={formik.touched.pincode && formik.errors.pincode}
+                />
+                </FormControl> */}
+              <FormControl fullWidth>
+                <Autocomplete
+                  value={stateVal}
+                  onChange={(event, newValue) => {
+                    if (newValue) {
+                      setStateVal(newValue);
+                    } else {
+                      setStateVal({ id: "", name: "" });
+                    }
+                  }}
+                  inputValue={inputValue}
+                  onInputChange={(event, newInputValue) => {
+                    setInputValue(newInputValue);
+                  }}
+                  id="state"
+                  options={stateFilter}
+                  getOptionLabel={(state) => state.name}
+                  renderInput={(params) => (
+                    <TextField {...params} label="State" />
+                  )}
+                />
+              </FormControl>
+
+              <FormControl fullWidth>
+                <Autocomplete
+                  value={cityVal}
+                  onChange={(event, newValue) => {
+                    if (newValue) {
+                      setCityVal(newValue);
+                    } else {
+                      setCityVal({ id: "", name: "" });
+                    }
+                  }}
+                  inputValue={inputCityValue}
+                  onInputChange={(event, newInputValue) => {
+                    setCityInputValue(newInputValue);
+                  }}
+                  id="city"
+                  options={city.data || []}
+                  getOptionLabel={(city) => city.name}
+                  renderInput={(params) => (
+                    <TextField {...params} label="City" />
+                  )}
+                />
+              </FormControl>
+
+              {id ? (
+                ""
+              ) : (
+                <FormControl fullWidth>
+                  <TextField
+                    name="mPin"
+                    type="number"
+                    label={
+                      studentLoader ? (
+                        <CustomComponentLoader padding="0 0" size={20} />
+                      ) : (
+                        "M-Pin"
+                      )
+                    }
+                    {...formik.getFieldProps("mPin")}
+                    onChange={(e) => {
+                      if (String(e.target.value).length <= 4) {
+                        formik.handleChange(e);
+                      }
+                    }}
+                    error={formik.touched.mPin && formik.errors.mPin}
+                  />
+                </FormControl>
+              )}
+            </Box>
+
+            <Stack alignItems="flex-end" sx={{ mt: 3 }}>
+              <LoadingButton
+                type="submit"
+                variant="contained"
+                loading={studentLoader}
+              >
+                {id ? "Update Staff" : "Create Staff"}
+              </LoadingButton>
+            </Stack>
+          </Grid>
+        </Grid>
+      </form>
+    </Container>
+  );
+}
+export default BasicDetail;

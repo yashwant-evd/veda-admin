@@ -1,0 +1,15 @@
+.dateHeightBatches {
+  .css-1j6hc4w-MuiInputBase-input-MuiOutlinedInput-input {
+    height: 25px !important;
+  }
+}
+
+.css-1ounzbb-MuiPaper-root-MuiDialog-paper {
+  min-width: 85% !important;
+  min-height: 85% !important;
+}
+
+.css-14bkzqi.MuiPaper-rounded {
+  min-width: 85% !important;
+  min-height: 85% !important;
+}
