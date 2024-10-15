@@ -6,11 +6,11 @@
   "private": true,
   "scripts": {
     "start": "npm run start-dev",
-    "start-dev": "env-cmd -f .env.development react-scripts --max_old_space_size=3072 start",
-    "build-dev": "env-cmd -f .env.development react-scripts --max_old_space_size=3072 build",
+    "start-dev": "env-cmd -f .env.development react-scripts --max_old_space_size=2048 start",
+    "build-dev": "env-cmd -f .env.development react-scripts --max_old_space_size=2048 build",
     "build-dev-start": "env-cmd -f .env.development serve -s build",
-    "start-prod": "env-cmd -f .env.production react-scripts --max_old_space_size=3072 start",
-    "build-prod": "env-cmd -f .env.production react-scripts --max_old_space_size=3072 build",
+    "start-prod": "env-cmd -f .env.production react-scripts --max_old_space_size=2048 start",
+    "build-prod": "env-cmd -f .env.production react-scripts --max_old_space_size=2048 build",
     "build-prod-start": "env-cmd -f .env.production serve -s build"
   },
   "babel": {
